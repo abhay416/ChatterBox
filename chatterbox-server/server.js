@@ -92,54 +92,29 @@ connectDB().catch(err => {
   console.error("MongoDB connection failed:", err.message);
 });
 
-/* ===================== SOCKET.IO ===================== */
-/*
-  NOTE:
-  - Socket.IO is NOT supported on Vercel serverless
-  - This block runs ONLY in local development
-  - In production, deploy Socket.IO separately (Render/Railway)
-*/
-
-let io = null;
-
-if (process.env.NODE_ENV !== "production") {
+/* ===================== SOCKET.IO (LOCAL ONLY) ===================== */
+if (!process.env.VERCEL) {
   const http = require("http");
   const { Server } = require("socket.io");
-
   const PORT = process.env.PORT || 5002;
+
   const server = http.createServer(app);
-
-  io = new Server(server, {
-    cors: {
-      origin: CLIENT_URL,
-      methods: ["GET", "POST"],
-      credentials: true
-    }
+  const io = new Server(server, {
+    cors: { origin: CLIENT_URL, methods: ["GET", "POST"] }
   });
 
-  server.listen(PORT, () => {
-    console.log(`Socket.IO server running on port ${PORT}`);
-  });
-
+  global.io = io;
+  
   io.on("connection", (socket) => {
     console.log("Socket connected:", socket.id);
 
-    socket.on("join", (roomId) => {
-      socket.join(roomId);
-    });
-
-    socket.on("leave", (roomId) => {
-      socket.leave(roomId);
-    });
+    socket.on("join", (roomId) => socket.join(roomId));
+    socket.on("leave", (roomId) => socket.leave(roomId));
 
     socket.on("disconnect", () => {
       console.log("Socket disconnected:", socket.id);
     });
   });
-}
-
-// expose safely (undefined on Vercel, valid locally)
-global.io = io;
 
 
   server.listen(PORT, () => {
